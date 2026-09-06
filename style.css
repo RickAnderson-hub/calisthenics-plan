@@ -246,7 +246,7 @@ main {
   color: var(--text-muted);
   margin-top: 2px;
 }
-.video-link {
+.howto-link {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -260,9 +260,9 @@ main {
   text-decoration: none;
   min-height: 28px;
 }
-.video-link svg { width: 12px; height: 12px; fill: var(--accent); stroke: none; flex: none; }
+.howto-link svg { width: 12px; height: 12px; fill: var(--accent); stroke: none; flex: none; }
 
-td .video-link { display: inline-flex; margin-top: 0; margin-left: 8px; vertical-align: middle; }
+td .howto-link { display: inline-flex; margin-top: 0; margin-left: 8px; vertical-align: middle; }
 
 .pair-tag {
   font-size: 11px;

@@ -127,7 +127,7 @@ function exerciseVideoLink(name) {
   const query = EXERCISE_VIDEO_QUERIES[name];
   if (!query) return null;
   return el('a', {
-    class: 'video-link',
+    class: 'howto-link',
     href: youtubeSearchUrl(query),
     target: '_blank',
     rel: 'noopener noreferrer',
