@@ -10,6 +10,49 @@ const WEEKLY_SCHEDULE = [
 
 const WALKING_PROGRESSION_NOTE = "Wednesday and Sunday remain predominantly walking.";
 
+/* Supplementary — not from the PDF. Maps each exercise name used above to a YouTube
+   search phrase (not a specific video ID, since we can't verify any single video stays
+   live/accurate). The app links to search results rather than embedding a fixed video. */
+const EXERCISE_VIDEO_QUERIES = {
+  'Chair squat': 'chair squat exercise proper form',
+  'Box/chair squat': 'box squat to chair proper form',
+  'Squat to lower box': 'box squat progression proper form',
+  'Goblet squat': 'goblet squat proper form tutorial',
+  'Box squat / goblet squat': 'goblet squat proper form tutorial',
+  'Squat variation': 'bodyweight squat proper form tutorial',
+  'Squat': 'bodyweight squat proper form tutorial',
+  'Bulgarian split squat': 'bulgarian split squat proper form tutorial',
+  'Split squat': 'split squat proper form tutorial',
+  'Split squat holding support': 'assisted split squat proper form beginner',
+  'Supported split squat': 'assisted split squat proper form beginner',
+  'Incline push-up': 'incline push up proper form tutorial',
+  'Incline / bench push-up': 'incline push up proper form tutorial',
+  'Push-up': 'push up proper form tutorial',
+  'Push-up variation': 'push up progression proper form tutorial',
+  'Band/cable row': 'band row proper form tutorial',
+  'Band row': 'band row proper form tutorial',
+  'One-arm row': 'one arm dumbbell row proper form tutorial',
+  'Inverted row': 'inverted row proper form tutorial',
+  'Row': 'inverted row proper form tutorial',
+  'Assisted pull-up / pulldown': 'assisted pull up lat pulldown proper form tutorial',
+  'Pull-up progression': 'pull up progression tutorial beginner',
+  'Romanian deadlift': 'romanian deadlift proper form tutorial',
+  'Romanian deadlift (DB/band)': 'dumbbell romanian deadlift proper form tutorial',
+  'Glute bridge': 'glute bridge proper form tutorial',
+  'Glute bridge / hip thrust': 'hip thrust proper form tutorial',
+  'Hip thrust': 'hip thrust proper form tutorial',
+  'Step-up': 'step up exercise proper form tutorial',
+  'Step-up to low step': 'low step up exercise proper form beginner',
+  'Farmer carry': 'farmer carry proper form tutorial',
+  'Suitcase carry': 'suitcase carry proper form tutorial',
+  'Carry': 'farmer carry proper form tutorial',
+  'Plank': 'plank proper form tutorial',
+  'Plank against bench/wall': 'incline plank proper form beginner',
+  'Dead bug': 'dead bug exercise proper form tutorial',
+  'Standing band shoulder press': 'standing band shoulder press proper form tutorial',
+  'Core': 'beginner core exercises tutorial',
+};
+
 const PLAN_DATA = {
   meta: {
     title: '6-Month Calisthenics & Strength Plan',

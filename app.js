@@ -117,6 +117,24 @@ function deleteEntry(id) {
 
 // ---------- svg icon for checkmark ----------
 const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+const PLAY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14l11-7z"/></svg>';
+
+// ---------- exercise video links ----------
+function youtubeSearchUrl(query) {
+  return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+}
+function exerciseVideoLink(name) {
+  const query = EXERCISE_VIDEO_QUERIES[name];
+  if (!query) return null;
+  return el('a', {
+    class: 'video-link',
+    href: youtubeSearchUrl(query),
+    target: '_blank',
+    rel: 'noopener noreferrer',
+    html: PLAY_SVG + '<span>How to</span>',
+    'aria-label': `Watch ${name} tutorial videos on YouTube`,
+  });
+}
 
 function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
@@ -265,6 +283,8 @@ function renderWorkoutFor(phase, week, dayKey, container, interactive) {
       nameLine.appendChild(document.createTextNode(ex.name));
       info.appendChild(nameLine);
       info.appendChild(el('div', { class: 'exercise-meta' }, `${ex.sets} × ${ex.reps}`));
+      const link = exerciseVideoLink(ex.name);
+      if (link) info.appendChild(link);
       row.appendChild(info);
       card.appendChild(row);
     });
@@ -345,7 +365,10 @@ function renderPlan() {
       day.exercises.forEach(ex => {
         const tr = el('tr');
         if (day.hasPairs) tr.appendChild(el('td', {}, ex.pair || ''));
-        tr.appendChild(el('td', {}, ex.name));
+        const nameCell = el('td', {}, ex.name);
+        const link = exerciseVideoLink(ex.name);
+        if (link) nameCell.appendChild(link);
+        tr.appendChild(nameCell);
         tr.appendChild(el('td', {}, `${ex.sets} × ${ex.reps}`));
         tbody.appendChild(tr);
       });
