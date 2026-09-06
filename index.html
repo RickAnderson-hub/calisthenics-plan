@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Rick's Calisthenics Plan</title>
+  <meta name="description" content="6-month calisthenics &amp; strength plan tracker" />
+  <meta name="theme-color" content="#0f6d5c" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+  <header class="app-header">
+    <div>
+      <h1>Calisthenics Plan</h1>
+      <div class="sub" id="header-sub">Loading…</div>
+    </div>
+    <button class="icon-btn" id="settings-btn" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </header>
+
+  <main>
+
+    <!-- TODAY -->
+    <section class="view active" id="view-today">
+      <div class="card today-hero" id="today-hero"></div>
+      <div id="today-day-select" class="day-select"></div>
+      <div id="today-workout"></div>
+    </section>
+
+    <!-- PLAN -->
+    <section class="view" id="view-plan">
+      <div class="card">
+        <h2>Weekly schedule</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Day</th><th>Session</th><th>Focus</th></tr></thead>
+            <tbody id="weekly-schedule-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="phase-list"></div>
+    </section>
+
+    <!-- TRACK -->
+    <section class="view" id="view-track">
+      <div class="card">
+        <h2>Log an entry</h2>
+        <form class="track-form" id="track-form"></form>
+      </div>
+      <div class="card">
+        <h2>Body weight trend</h2>
+        <div class="chart-wrap" id="weight-chart"></div>
+        <div class="note-box" id="trend-note"></div>
+      </div>
+      <div class="card">
+        <h2>History</h2>
+        <div class="entry-list" id="entry-list"></div>
+      </div>
+    </section>
+
+    <!-- GUIDE -->
+    <section class="view" id="view-guide">
+      <div class="card">
+        <h2>Overview &amp; philosophy</h2>
+        <div id="guide-overview"></div>
+      </div>
+      <div class="card">
+        <h2>The progression rule</h2>
+        <div id="guide-progression"></div>
+      </div>
+      <div class="card">
+        <h2>Walking</h2>
+        <div id="guide-walking"></div>
+      </div>
+      <div class="card">
+        <h2>Weight loss</h2>
+        <div id="guide-weightloss"></div>
+      </div>
+      <div class="card">
+        <h2>Equipment</h2>
+        <div id="guide-equipment"></div>
+      </div>
+      <div class="card">
+        <div id="guide-philosophy"></div>
+      </div>
+      <div class="card">
+        <div class="quote-box" id="guide-quote"></div>
+      </div>
+      <div class="card">
+        <h2>References</h2>
+        <ul class="ref-list" id="guide-refs"></ul>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="bottom-nav" id="bottom-nav">
+    <button data-view="today" class="active">
+      <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 6 6 .9-4.5 4.3 1 6.3-5.5-2.9-5.5 2.9 1-6.3L3 8.9 9 8z"/></svg>
+      <span>Today</span>
+    </button>
+    <button data-view="plan">
+      <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <span>Plan</span>
+    </button>
+    <button data-view="track">
+      <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+      <span>Track</span>
+    </button>
+    <button data-view="guide">
+      <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span>Guide</span>
+    </button>
+  </nav>
+
+  <div class="modal-backdrop" id="settings-modal" hidden>
+    <div class="modal-sheet">
+      <div class="modal-close-row">
+        <button class="icon-btn" id="settings-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <h2>Settings</h2>
+      <div class="field">
+        <label for="start-date-input">Plan start date</label>
+        <span class="hint">Used to work out your current week &amp; phase.</span>
+        <input type="date" id="start-date-input" />
+      </div>
+      <div class="section-gap field">
+        <label for="week-override-input">Manual week override (optional)</label>
+        <span class="hint">Leave blank to calculate automatically from the start date.</span>
+        <input type="number" id="week-override-input" min="1" max="24" placeholder="1–24" />
+      </div>
+      <div class="btn-row section-gap">
+        <button class="btn" id="settings-save">Save</button>
+      </div>
+      <div class="btn-row section-gap">
+        <button class="btn danger" id="settings-reset">Reset all data</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./data.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
