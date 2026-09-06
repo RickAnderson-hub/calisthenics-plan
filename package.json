@@ -1,0 +1,27 @@
+{
+  "name": "calisthenics",
+  "version": "1.0.0",
+  "description": "A mobile-friendly web app for the 6-month calisthenics & strength plan (`Rick_6-Month_Calisthenics_Plan.pdf`). No build step — plain HTML/CSS/JS — deployable straight to GitHub Pages.",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RickAnderson-hub/calisthenics-plan.git"
+  },
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/RickAnderson-hub/calisthenics-plan/issues"
+  },
+  "homepage": "https://github.com/RickAnderson-hub/calisthenics-plan#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@vitest/coverage-v8": "^5.0.0",
+    "jsdom": "^30.0.1",
+    "vitest": "^5.0.0"
+  }
+}

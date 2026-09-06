@@ -38,6 +38,21 @@ python3 -m http.server 8000
 # then open http://localhost:8000/calisthenics/
 ```
 
+## Automated tests
+
+Unit tests (Vitest + jsdom) and end-to-end tests (Playwright) live in `tests/`. They require Node.js; run once:
+```bash
+npm install
+npx playwright install chromium
+```
+Then:
+```bash
+npm test              # unit tests
+npm run test:coverage # unit tests with a coverage report (app.js, threshold 80%)
+npm run test:e2e      # end-to-end tests against a local server
+```
+These dev dependencies aren't part of the deployed app — GitHub Pages only ever serves the plain HTML/CSS/JS files.
+
 ## Editing the plan
 
 All workout content lives in `data.js`, transcribed from the PDF. Edit it directly to adjust exercises, sets/reps, or guidance text — the app reads from it at runtime.

@@ -47,10 +47,6 @@ function addDays(d, n) {
   r.setDate(r.getDate() + n);
   return r;
 }
-function fmtShort(d) {
-  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-}
-
 function getStartDate() {
   const raw = safeGet(STORAGE.startDate);
   return raw ? parseISO(raw) : null;
@@ -141,7 +137,7 @@ function el(tag, attrs = {}, children = []) {
   for (const [k, v] of Object.entries(attrs)) {
     if (k === 'class') node.className = v;
     else if (k === 'html') node.innerHTML = v;
-    else if (k.startsWith('data-')) node.setAttribute(k, v);
+    else if (k.startsWith('data-') || k.startsWith('aria-')) node.setAttribute(k, v);
     else node[k] = v;
   }
   (Array.isArray(children) ? children : [children]).forEach(c => {
