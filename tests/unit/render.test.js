@@ -18,21 +18,17 @@ function click(el) {
   el.dispatchEvent(new window.Event('click', { bubbles: true }));
 }
 
-describe('renderAll — before a start date is set', () => {
-  it('shows the "get started" hero and lets you jump to settings', () => {
+describe('renderAll — default state (fresh install)', () => {
+  it('opens straight onto Week 1 with no settings gate', () => {
     vi.setSystemTime(new Date(2026, 8, 8)); // Tuesday
     initNav();
     initSettings();
     renderAll();
 
-    expect(document.getElementById('header-sub').textContent).toBe('Set a start date to begin');
+    expect(document.getElementById('header-sub').textContent).toBe('Week 1 of 24 — Foundation');
     const hero = document.getElementById('today-hero');
-    expect(hero.querySelector('h2').textContent).toBe('Get started');
-
-    const openBtn = hero.querySelector('button');
+    expect(hero.querySelector('h2').textContent).toBe('Phase 1 of 6');
     expect(document.getElementById('settings-modal').hidden).toBe(true);
-    click(openBtn);
-    expect(document.getElementById('settings-modal').hidden).toBe(false);
   });
 
   it('renders a day chip per DAY_ORDER entry and a generic conditioning card for the default day', () => {
@@ -44,15 +40,65 @@ describe('renderAll — before a start date is set', () => {
   });
 });
 
-describe('renderAll — with a start date set', () => {
+describe('week completion & catch-up', () => {
   beforeEach(() => {
-    vi.setSystemTime(new Date(2026, 8, 8)); // Tuesday, week 6 given this start date
-    safeSet(STORAGE.startDate, '2026-07-28');
+    vi.setSystemTime(new Date(2026, 8, 8)); // Tuesday, week 1 (default) — no day is generic in Phase 1
+    renderAll();
+  });
+
+  function markDayComplete(dayLabel) {
+    const chips = [...document.querySelectorAll('#today-day-select .day-chip')];
+    click(chips.find((c) => c.textContent.startsWith(dayLabel)));
+    const rows = [...document.querySelectorAll('#today-workout .exercise-row')];
+    click(rows[rows.length - 1].querySelector('.exercise-check')); // the "Session complete" row
+  }
+
+  it('marks the day chip done once that session is checked complete', () => {
+    markDayComplete('Tuesday');
+    const chip = [...document.querySelectorAll('#today-day-select .day-chip')].find((c) => c.textContent.startsWith('Tuesday'));
+    expect(chip.classList.contains('done')).toBe(true);
+  });
+
+  it('shows a live progress readout and a manual skip while the week is unfinished', () => {
+    markDayComplete('Tuesday');
+    const hero = document.getElementById('today-hero');
+    expect(hero.textContent).toContain('1 of 4 sessions done this week');
+    const skipBtn = [...hero.querySelectorAll('button')].find((b) => b.textContent.includes('Skip to next week'));
+    expect(skipBtn).toBeTruthy();
+    click(skipBtn);
+    expect(getCurrentWeek()).toBe(2);
+  });
+
+  it('offers a "start next week" CTA once all four sessions are done, and advances on click', () => {
+    ['Tuesday', 'Wednesday', 'Saturday', 'Sunday'].forEach(markDayComplete);
+    const hero = document.getElementById('today-hero');
+    const startBtn = [...hero.querySelectorAll('button')].find((b) => b.textContent.includes('Week complete'));
+    expect(startBtn).toBeTruthy();
+    click(startBtn);
+    expect(getCurrentWeek()).toBe(2);
+    expect(document.getElementById('header-sub').textContent).toContain('Week 2 of 24');
+  });
+
+  it('shows a plan-complete message instead of an advance button once week 24 is finished', () => {
+    safeSet(STORAGE.currentWeek, '24');
+    globalThis.__resetSelectedDay();
+    renderAll();
+    ['Tuesday', 'Wednesday', 'Saturday', 'Sunday'].forEach(markDayComplete);
+    const hero = document.getElementById('today-hero');
+    expect(hero.textContent).toContain('Plan complete');
+    expect([...hero.querySelectorAll('button')].some((b) => b.textContent.includes('Week complete'))).toBe(false);
+  });
+});
+
+describe('renderAll — on a chosen week', () => {
+  beforeEach(() => {
+    vi.setSystemTime(new Date(2026, 8, 8)); // Tuesday
+    safeSet(STORAGE.currentWeek, '6');
     renderAll();
   });
 
   it('shows phase/week info and a progress bar', () => {
-    const { week } = computeCurrentWeek();
+    const week = getCurrentWeek();
     expect(document.getElementById('header-sub').textContent).toContain(`Week ${week} of 24`);
     const hero = document.getElementById('today-hero');
     expect(hero.querySelector('h2').textContent).toMatch(/^Phase \d of 6/);
@@ -67,7 +113,7 @@ describe('renderAll — with a start date set', () => {
 
     const workout = document.getElementById('today-workout');
     const rows = workout.querySelectorAll('.exercise-row');
-    const { week } = computeCurrentWeek();
+    const week = getCurrentWeek();
     const phase = getPhaseForWeek(week);
     expect(rows.length).toBe(phase.days.saturday.exercises.length + 1); // + session-complete row
     const link = workout.querySelector('.howto-link');
@@ -103,8 +149,8 @@ describe('renderAll — with a start date set', () => {
 
 describe('Phase 1 Wednesday — mobility list', () => {
   it('renders the mobility list items for the structured (non-generic) Wednesday day', () => {
-    vi.setSystemTime(new Date(2026, 0, 6)); // week 1
-    safeSet(STORAGE.startDate, '2026-01-06');
+    vi.setSystemTime(new Date(2026, 0, 6));
+    // Week 1 (default, nothing stored) is Phase 1, where Wednesday is structured.
     renderAll();
     const chips = [...document.querySelectorAll('#today-day-select .day-chip')];
     click(chips.find((c) => c.textContent.startsWith('Wednesday')));
@@ -117,8 +163,7 @@ describe('Phase 1 Wednesday — mobility list', () => {
 describe('Phase 4 — the "Goal" callout on strength days', () => {
   it('shows the phase-level goal note under Tuesday and Saturday', () => {
     vi.setSystemTime(new Date(2027, 0, 5));
-    safeSet(STORAGE.startDate, '2026-01-06');
-    safeSet(STORAGE.weekOverride, '14'); // Phase 4: Progressive strength
+    safeSet(STORAGE.currentWeek, '14'); // Phase 4: Progressive strength
     renderAll();
     const workout = document.getElementById('today-workout');
     expect(workout.querySelector('.warn-box strong').textContent).toBe('Goal');
@@ -128,7 +173,7 @@ describe('Phase 4 — the "Goal" callout on strength days', () => {
 describe('generic conditioning day (Wednesday/Sunday)', () => {
   it('renders a walking session checkable row', () => {
     vi.setSystemTime(new Date(2026, 8, 9)); // Wednesday
-    safeSet(STORAGE.startDate, '2026-07-28');
+    safeSet(STORAGE.currentWeek, '6'); // Phase 2, where Wednesday is generic
     renderAll();
     const workout = document.getElementById('today-workout');
     expect(workout.querySelector('h3').textContent).toBe('Conditioning');
@@ -158,12 +203,10 @@ describe('settings modal', () => {
     renderAll();
   });
 
-  it('prefills fields from storage and closes via the close button', () => {
-    safeSet(STORAGE.startDate, '2026-07-28');
-    safeSet(STORAGE.weekOverride, '3');
+  it('prefills the field from storage and closes via the close button', () => {
+    safeSet(STORAGE.currentWeek, '3');
     click(document.getElementById('settings-btn'));
-    expect(document.getElementById('start-date-input').value).toBe('2026-07-28');
-    expect(document.getElementById('week-override-input').value).toBe('3');
+    expect(document.getElementById('current-week-input').value).toBe('3');
 
     click(document.getElementById('settings-close'));
     expect(document.getElementById('settings-modal').hidden).toBe(true);
@@ -178,49 +221,42 @@ describe('settings modal', () => {
     expect(document.getElementById('settings-modal').hidden).toBe(true);
   });
 
-  it('save writes start date + week override, clears the selected day, and re-renders', () => {
+  it('save writes the current week, clears the selected day, and re-renders', () => {
     click(document.getElementById('settings-btn'));
-    document.getElementById('start-date-input').value = '2026-07-28';
-    document.getElementById('week-override-input').value = '9';
+    document.getElementById('current-week-input').value = '9';
     click(document.getElementById('settings-save'));
 
-    expect(safeGet(STORAGE.startDate)).toBe('2026-07-28');
-    expect(safeGet(STORAGE.weekOverride)).toBe('9');
+    expect(safeGet(STORAGE.currentWeek)).toBe('9');
     expect(document.getElementById('settings-modal').hidden).toBe(true);
     expect(document.getElementById('header-sub').textContent).toContain('Week 9 of 24');
   });
 
-  it('save with blank fields clears any existing start date / week override', () => {
-    safeSet(STORAGE.startDate, '2026-07-28');
-    safeSet(STORAGE.weekOverride, '9');
+  it('save ignores a blank field and leaves the current week unchanged', () => {
+    safeSet(STORAGE.currentWeek, '9');
     click(document.getElementById('settings-btn'));
-    document.getElementById('start-date-input').value = '';
-    document.getElementById('week-override-input').value = '';
+    document.getElementById('current-week-input').value = '';
     click(document.getElementById('settings-save'));
 
-    expect(safeGet(STORAGE.startDate)).toBeNull();
-    expect(safeGet(STORAGE.weekOverride)).toBeNull();
+    expect(safeGet(STORAGE.currentWeek)).toBe('9');
   });
 
   it('reset only clears "cal." prefixed keys, and only when confirmed', () => {
-    safeSet(STORAGE.startDate, '2026-07-28');
+    safeSet(STORAGE.currentWeek, '9');
     safeSet('unrelated.key', 'keep-me');
     vi.spyOn(window, 'confirm').mockReturnValueOnce(false);
     click(document.getElementById('settings-btn'));
     click(document.getElementById('settings-reset'));
-    expect(safeGet(STORAGE.startDate)).toBe('2026-07-28');
+    expect(safeGet(STORAGE.currentWeek)).toBe('9');
 
     vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
     click(document.getElementById('settings-reset'));
-    expect(safeGet(STORAGE.startDate)).toBeNull();
+    expect(safeGet(STORAGE.currentWeek)).toBeNull();
     expect(safeGet('unrelated.key')).toBe('keep-me');
   });
 });
 
 describe('renderPlan', () => {
   beforeEach(() => {
-    vi.setSystemTime(new Date(2026, 8, 8));
-    safeSet(STORAGE.startDate, '2026-07-28');
     renderPlan();
   });
 

@@ -1,9 +1,8 @@
 /* Rick's Calisthenics Plan — app logic. No build step, no framework. */
 
 const STORAGE = {
-  startDate: 'cal.startDate',
-  weekOverride: 'cal.weekOverride',
-  sessionPrefix: 'cal.session.', // + isoDate
+  currentWeek: 'cal.currentWeek',
+  sessionPrefix: 'cal.session.', // + 'w' + week + '-' + dayKey
   tracking: 'cal.tracking',
 };
 
@@ -34,10 +33,6 @@ function isoDate(d) {
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
-function parseISO(s) {
-  const [y, m, d] = s.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
 function todayMidnight() {
   const t = new Date();
   return new Date(t.getFullYear(), t.getMonth(), t.getDate());
@@ -47,39 +42,28 @@ function addDays(d, n) {
   r.setDate(r.getDate() + n);
   return r;
 }
-function getStartDate() {
-  const raw = safeGet(STORAGE.startDate);
-  return raw ? parseISO(raw) : null;
-}
-function getWeekOverride() {
-  const raw = safeGet(STORAGE.weekOverride);
-  if (!raw) return null;
-  const n = parseInt(raw, 10);
-  return Number.isFinite(n) ? n : null;
-}
 function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
 
-function computeCurrentWeek() {
-  const override = getWeekOverride();
-  const start = getStartDate();
-  if (!start) return { week: 1, hasStart: false, overridden: !!override };
-  if (override) return { week: clamp(override, 1, 24), hasStart: true, overridden: true };
-  const diffDays = Math.floor((todayMidnight() - start) / 86400000);
-  const week = clamp(Math.floor(diffDays / 7) + 1, 1, 24);
-  return { week, hasStart: true, overridden: false };
+// ---------- progression (self-paced, not calendar-driven) ----------
+function getCurrentWeek() {
+  const raw = safeGet(STORAGE.currentWeek);
+  const n = raw ? parseInt(raw, 10) : 1;
+  return clamp(Number.isFinite(n) ? n : 1, 1, 24);
 }
-function weekStartDate(week) {
-  const start = getStartDate() || todayMidnight();
-  return addDays(start, (week - 1) * 7);
+function setCurrentWeek(week) {
+  safeSet(STORAGE.currentWeek, String(clamp(week, 1, 24)));
 }
-function dateForWeekday(week, weekdayKey) {
-  const targetNum = WEEKDAY_NUM[weekdayKey];
-  const ws = weekStartDate(week);
-  for (let i = 0; i < 7; i++) {
-    const d = addDays(ws, i);
-    if (d.getDay() === targetNum) return d;
-  }
-  return ws;
+function sessionKeyFor(week, dayKey) {
+  return `w${week}-${dayKey}`;
+}
+function isDaySessionDone(phase, week, dayKey) {
+  const day = phase.days[dayKey];
+  if (!day) return false;
+  const session = getSession(sessionKeyFor(week, dayKey));
+  return day.generic ? !!session.walk : !!session[`${dayKey}-complete`];
+}
+function isWeekComplete(phase, week) {
+  return DAY_ORDER.every(dayKey => isDaySessionDone(phase, week, dayKey));
 }
 function getPhaseForWeek(week) {
   return PLAN_DATA.phases.find(p => week >= p.weekRange[0] && week <= p.weekRange[1]) || PLAN_DATA.phases[0];
@@ -164,78 +148,102 @@ function showView(name) {
 }
 
 // ================= TODAY VIEW =================
-function defaultSelectedDay(week, overridden) {
-  const today = todayMidnight();
-  const isRealCurrentWeek = !overridden;
-  if (isRealCurrentWeek) {
-    const todayNum = today.getDay();
-    const match = DAY_ORDER.find(k => WEEKDAY_NUM[k] === todayNum);
-    if (match) return match;
-  }
-  return 'tuesday';
+function defaultSelectedDay() {
+  const todayNum = todayMidnight().getDay();
+  const match = DAY_ORDER.find(k => WEEKDAY_NUM[k] === todayNum);
+  return match || 'tuesday';
 }
 
-function renderToday() {
-  const { week, hasStart, overridden } = computeCurrentWeek();
-  const phase = getPhaseForWeek(week);
-  const sub = hasStart ? `Week ${week} of 24 — ${phase.name}` : 'Set a start date to begin';
-  document.getElementById('header-sub').textContent = sub;
+function renderHeroAndChips(phase, week) {
+  document.getElementById('header-sub').textContent = `Week ${week} of 24 — ${phase.name}`;
 
-  if (!selectedDayKey) selectedDayKey = defaultSelectedDay(week, overridden);
+  const doneCount = DAY_ORDER.filter(dk => isDaySessionDone(phase, week, dk)).length;
+  const weekComplete = isWeekComplete(phase, week);
 
   const hero = document.getElementById('today-hero');
   hero.innerHTML = '';
-  if (!hasStart) {
-    hero.appendChild(el('h2', {}, 'Get started'));
-    hero.appendChild(el('div', { class: 'phase-line' }, "Pick a plan start date in Settings and this screen will always open on today's workout."));
-    const btn = el('button', { class: 'btn', style: 'margin-top:12px;background:var(--accent-ink);color:var(--accent);' }, 'Open settings');
-    btn.addEventListener('click', openSettings);
+  hero.appendChild(el('h2', {}, `Phase ${phase.id} of 6`));
+  hero.appendChild(el('div', { class: 'week-line' }, `Week ${week} of 24`));
+  hero.appendChild(el('div', { class: 'phase-line' }, `${phase.name} — ${phase.goal}`));
+  const track = el('div', { class: 'progress-track' });
+  track.appendChild(el('div', { class: 'progress-fill', style: `width:${(week / 24) * 100}%` }));
+  hero.appendChild(track);
+
+  if (weekComplete && week >= 24) {
+    hero.appendChild(el('div', { class: 'phase-line', style: 'margin-top:12px;font-weight:700;' }, '🎉 Plan complete — nice work.'));
+  } else if (weekComplete) {
+    const btn = el('button', { class: 'btn', style: 'margin-top:12px;background:var(--accent-ink);color:var(--accent);' }, `Week complete — start Week ${week + 1}`);
+    btn.addEventListener('click', () => {
+      setCurrentWeek(week + 1);
+      selectedDayKey = null;
+      renderAll();
+    });
     hero.appendChild(btn);
   } else {
-    hero.appendChild(el('h2', {}, `Phase ${phase.id} of 6${overridden ? ' · manual' : ''}`));
-    hero.appendChild(el('div', { class: 'week-line' }, `Week ${week} of 24`));
-    hero.appendChild(el('div', { class: 'phase-line' }, `${phase.name} — ${phase.goal}`));
-    const track = el('div', { class: 'progress-track' });
-    track.appendChild(el('div', { class: 'progress-fill', style: `width:${(week / 24) * 100}%` }));
-    hero.appendChild(track);
+    hero.appendChild(el('div', { class: 'phase-line', style: 'margin-top:12px;' }, `${doneCount} of ${DAY_ORDER.length} sessions done this week`));
+    if (week < 24) {
+      const skip = el('button', { class: 'btn', style: 'margin-top:8px;background:transparent;border:1px solid var(--accent-ink);color:var(--accent-ink);' }, 'Skip to next week anyway');
+      skip.addEventListener('click', () => {
+        setCurrentWeek(week + 1);
+        selectedDayKey = null;
+        renderAll();
+      });
+      hero.appendChild(skip);
+    }
   }
 
   // day chips
   const chipWrap = document.getElementById('today-day-select');
   chipWrap.innerHTML = '';
   DAY_ORDER.forEach(dayKey => {
-    const d = dateForWeekday(week, dayKey);
     const label = dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
-    const chip = el('button', { class: 'day-chip' + (dayKey === selectedDayKey ? ' active' : '') }, `${label} · ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`);
+    const done = isDaySessionDone(phase, week, dayKey);
+    const chip = el('button', { class: 'day-chip' + (dayKey === selectedDayKey ? ' active' : '') + (done ? ' done' : '') }, done ? `${label} ✓` : label);
     chip.addEventListener('click', () => { selectedDayKey = dayKey; renderToday(); });
     chipWrap.appendChild(chip);
   });
+}
 
+// Re-summarizes the hero + day chips without rebuilding the open workout
+// card, so ticking a checkbox updates "N of 4 done" and the chip's ✓ live
+// instead of only on the next chip switch or full re-render.
+function refreshTodayHeroAndChips() {
+  const week = getCurrentWeek();
+  renderHeroAndChips(getPhaseForWeek(week), week);
+}
+
+function renderToday() {
+  const week = getCurrentWeek();
+  const phase = getPhaseForWeek(week);
+  if (!selectedDayKey) selectedDayKey = defaultSelectedDay();
+
+  renderHeroAndChips(phase, week);
   renderWorkoutFor(phase, week, selectedDayKey, document.getElementById('today-workout'), true);
 }
 
-function genericConditioningNode(dayKey, isoStr, doneKey) {
+function genericConditioningNode(dayKey, slot, doneKey) {
   const wrap = el('div', { class: 'card' });
   const label = dayKey === 'wednesday' ? WALKING_GUIDE_LABEL('Wednesday', '30 → 45 min') : WALKING_GUIDE_LABEL('Sunday', '40 → 60 min');
   wrap.appendChild(el('h3', {}, dayKey === 'wednesday' ? 'Conditioning' : 'Easy Conditioning'));
   wrap.appendChild(el('p', { class: 'overview-p' }, label));
   wrap.appendChild(el('p', { class: 'overview-p' }, WALKING_PROGRESSION_NOTE));
-  wrap.appendChild(checkableRow('Walking session', doneKey, isoStr));
+  wrap.appendChild(checkableRow('Walking session', doneKey, slot));
   return wrap;
 }
 function WALKING_GUIDE_LABEL(day, range) {
   return `${day}: progressing ${range} (see the Walking card in the Guide tab for the full plan).`;
 }
 
-function checkableRow(label, key, isoStr) {
-  const session = getSession(isoStr);
+function checkableRow(label, key, slot) {
+  const session = getSession(slot);
   const doneNow = !!session[key];
   const row = el('div', { class: 'exercise-row' + (doneNow ? ' done' : '') });
   const box = el('button', { class: 'exercise-check' + (doneNow ? ' checked' : ''), html: CHECK_SVG, 'aria-label': 'Mark complete' });
   box.addEventListener('click', () => {
-    const nowDone = toggleExerciseDone(isoStr, key);
+    const nowDone = toggleExerciseDone(slot, key);
     box.classList.toggle('checked', nowDone);
     row.classList.toggle('done', nowDone);
+    refreshTodayHeroAndChips();
   });
   row.appendChild(box);
   row.appendChild(el('div', { class: 'exercise-info' }, el('div', { class: 'exercise-name' }, label)));
@@ -246,10 +254,10 @@ function renderWorkoutFor(phase, week, dayKey, container, interactive) {
   container.innerHTML = '';
   const day = phase.days[dayKey];
   if (!day) return;
-  const isoStr = isoDate(dateForWeekday(week, dayKey));
+  const slot = sessionKeyFor(week, dayKey);
 
   if (day.generic) {
-    container.appendChild(interactive ? genericConditioningNode(dayKey, isoStr, 'walk') : staticGenericNode(dayKey));
+    container.appendChild(interactive ? genericConditioningNode(dayKey, slot, 'walk') : staticGenericNode(dayKey));
     return;
   }
 
@@ -261,13 +269,13 @@ function renderWorkoutFor(phase, week, dayKey, container, interactive) {
   if (day.exercises) {
     day.exercises.forEach((ex, idx) => {
       const key = `${dayKey}-${idx}-${ex.name}`;
-      const session = getSession(isoStr);
+      const session = getSession(slot);
       const doneNow = interactive && !!session[key];
       const row = el('div', { class: 'exercise-row' + (doneNow ? ' done' : '') });
       if (interactive) {
         const box = el('button', { class: 'exercise-check' + (doneNow ? ' checked' : ''), html: CHECK_SVG, 'aria-label': 'Mark complete' });
         box.addEventListener('click', () => {
-          const nowDone = toggleExerciseDone(isoStr, key);
+          const nowDone = toggleExerciseDone(slot, key);
           box.classList.toggle('checked', nowDone);
           row.classList.toggle('done', nowDone);
         });
@@ -294,7 +302,7 @@ function renderWorkoutFor(phase, week, dayKey, container, interactive) {
   if (day.optional) card.appendChild(el('p', { class: 'overview-p' }, day.optional));
   if (day.note) card.appendChild(el('div', { class: 'note-box' }, day.note));
   if (interactive && (day.exercises || day.mobility || day.optional)) {
-    card.appendChild(checkableRow('Session complete', `${dayKey}-complete`, isoStr));
+    card.appendChild(checkableRow('Session complete', `${dayKey}-complete`, slot));
   }
   container.appendChild(card);
 
@@ -325,7 +333,7 @@ function renderPlan() {
     ]));
   });
 
-  const { week } = computeCurrentWeek();
+  const week = getCurrentWeek();
   const currentPhase = getPhaseForWeek(week);
   const list = document.getElementById('phase-list');
   list.innerHTML = '';
@@ -607,8 +615,7 @@ function renderGuide() {
 // ================= SETTINGS =================
 function openSettings() {
   const modal = document.getElementById('settings-modal');
-  document.getElementById('start-date-input').value = safeGet(STORAGE.startDate) || '';
-  document.getElementById('week-override-input').value = safeGet(STORAGE.weekOverride) || '';
+  document.getElementById('current-week-input').value = String(getCurrentWeek());
   modal.hidden = false;
 }
 function closeSettings() { document.getElementById('settings-modal').hidden = true; }
@@ -620,16 +627,14 @@ function initSettings() {
     if (e.target.id === 'settings-modal') closeSettings();
   });
   document.getElementById('settings-save').addEventListener('click', () => {
-    const dateVal = document.getElementById('start-date-input').value;
-    const weekVal = document.getElementById('week-override-input').value;
-    if (dateVal) safeSet(STORAGE.startDate, dateVal); else safeRemove(STORAGE.startDate);
-    if (weekVal) safeSet(STORAGE.weekOverride, weekVal); else safeRemove(STORAGE.weekOverride);
+    const weekVal = parseInt(document.getElementById('current-week-input').value, 10);
+    if (Number.isFinite(weekVal)) setCurrentWeek(weekVal);
     selectedDayKey = null;
     closeSettings();
     renderAll();
   });
   document.getElementById('settings-reset').addEventListener('click', () => {
-    if (!confirm('This clears your start date, week override, session check-offs, and tracking history on this device. Continue?')) return;
+    if (!confirm('This clears your current week, session check-offs, and tracking history on this device. Continue?')) return;
     try {
       const toRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
@@ -657,5 +662,4 @@ document.addEventListener('DOMContentLoaded', () => {
   initNav();
   initSettings();
   renderAll();
-  if (!getStartDate()) openSettings();
 });

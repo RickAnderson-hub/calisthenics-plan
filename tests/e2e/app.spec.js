@@ -10,14 +10,16 @@ async function gotoFresh(page) {
 }
 
 test.describe('first run', () => {
-  test('settings open automatically and setting a start date updates Today', async ({ page }) => {
+  test('opens straight onto Week 1 with no settings gate, and the week can be jumped manually', async ({ page }) => {
     await gotoFresh(page);
     const modal = page.locator('#settings-modal');
-    await expect(modal).toBeVisible();
-
-    await page.fill('#start-date-input', '2026-08-04');
-    await page.click('#settings-save');
     await expect(modal).toBeHidden();
+    await expect(page.locator('#header-sub')).toContainText('Week 1 of 24');
+    await expect(page.locator('.today-hero h2')).toContainText('Phase 1 of 6');
+
+    await page.click('#settings-btn');
+    await page.fill('#current-week-input', '6');
+    await page.click('#settings-save');
 
     await expect(page.locator('#header-sub')).toContainText('Week 6 of 24');
     await expect(page.locator('.today-hero h2')).toContainText('Phase 2 of 6');
@@ -27,8 +29,6 @@ test.describe('first run', () => {
 test.describe('Today tab', () => {
   test.beforeEach(async ({ page }) => {
     await gotoFresh(page);
-    await page.fill('#start-date-input', '2026-08-04');
-    await page.click('#settings-save');
   });
 
   test('switching day chips shows that day\'s exercises with how-to links', async ({ page }) => {
@@ -51,17 +51,27 @@ test.describe('Today tab', () => {
     const boxAfterReload = page.locator('#today-workout .exercise-check').first();
     await expect(boxAfterReload).toHaveClass(/checked/);
   });
+
+  test('completing all four sessions in a week offers to start the next one', async ({ page }) => {
+    for (const day of ['Tuesday', 'Wednesday', 'Saturday', 'Sunday']) {
+      await page.click(`.day-chip:has-text("${day}")`);
+      await page.locator('#today-workout .exercise-row').last().locator('.exercise-check').click();
+    }
+    const startBtn = page.locator('.today-hero button:has-text("Week complete")');
+    await expect(startBtn).toBeVisible();
+    await startBtn.click();
+    await expect(page.locator('#header-sub')).toContainText('Week 2 of 24');
+  });
 });
 
 test.describe('Plan tab', () => {
   test('expanding a phase shows its exercise tables with working how-to links', async ({ page }) => {
     await gotoFresh(page);
-    await page.click('#settings-close');
     await page.click('#bottom-nav button[data-view="plan"]');
 
-    // Phase 1 (index 0) starts open since it's the current phase with no start
-    // date set, so target Phase 2 (index 1) — initially closed — by position,
-    // since a class-based locator would stop matching once we toggle it open.
+    // Phase 1 (index 0) starts open since Week 1 is the default current week,
+    // so target Phase 2 (index 1) — initially closed — by position, since a
+    // class-based locator would stop matching once we toggle it open.
     const accordion = page.locator('.phase-accordion').nth(1);
     await accordion.locator('.phase-head').click();
     await expect(accordion).toHaveClass(/open/);
@@ -74,7 +84,6 @@ test.describe('Plan tab', () => {
 test.describe('Track tab', () => {
   test('logging and deleting a body-weight entry updates the list and chart', async ({ page }) => {
     await gotoFresh(page);
-    await page.click('#settings-close');
     await page.click('#bottom-nav button[data-view="track"]');
 
     await expect(page.locator('#entry-list .empty-state')).toBeVisible();
@@ -97,7 +106,6 @@ test.describe('Track tab', () => {
 test.describe('Guide tab', () => {
   test('renders reference links that open in a new tab', async ({ page }) => {
     await gotoFresh(page);
-    await page.click('#settings-close');
     await page.click('#bottom-nav button[data-view="guide"]');
 
     const refs = page.locator('#guide-refs a');
@@ -109,7 +117,6 @@ test.describe('Guide tab', () => {
 test.describe('bottom navigation', () => {
   test('switches the active view for each tab', async ({ page }) => {
     await gotoFresh(page);
-    await page.click('#settings-close');
 
     for (const view of ['plan', 'track', 'guide', 'today']) {
       await page.click(`#bottom-nav button[data-view="${view}"]`);

@@ -127,14 +127,9 @@
       </div>
       <h2>Settings</h2>
       <div class="field">
-        <label for="start-date-input">Plan start date</label>
-        <span class="hint">Used to work out your current week &amp; phase.</span>
-        <input type="date" id="start-date-input" />
-      </div>
-      <div class="section-gap field">
-        <label for="week-override-input">Manual week override (optional)</label>
-        <span class="hint">Leave blank to calculate automatically from the start date.</span>
-        <input type="number" id="week-override-input" min="1" max="24" placeholder="1–24" />
+        <label for="current-week-input">Current week</label>
+        <span class="hint">Jump to a different week — e.g. to catch up after a break, or start over.</span>
+        <input type="number" id="current-week-input" min="1" max="24" placeholder="1–24" />
       </div>
       <div class="btn-row section-gap">
         <button class="btn" id="settings-save">Save</button>

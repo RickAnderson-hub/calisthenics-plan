@@ -201,6 +201,10 @@ main {
   color: var(--accent-ink);
   border-color: var(--accent);
 }
+.day-chip.done:not(.active) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 
 .exercise-row {
   display: flex;
